@@ -1,13 +1,15 @@
 {
   "name": "mandado-agent",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
   "description": "Buyer and store AI agents negotiate; PayPal authorizes then captures only after human approval",
   "license": "MIT",
+  "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "start": "node -e \"console.log('Mandado scaffold — not implemented yet')\""
+    "start": "node src/server.js",
+    "test": "node --test test/"
   }
 }
