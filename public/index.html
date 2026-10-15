@@ -1,0 +1,698 @@
+<!DOCTYPE html lang="es">
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mandado</title>
+  <style>
+    :root {
+      --primary-blue: #0070e0;
+      --primary-blue-dark: #003087;
+      --bg-light: #f5f5f5;
+      --white: #ffffff;
+      --text-dark: #333333;
+      --text-gray: #666666;
+      --error-red: #e74c3c;
+      --success-green: #2ecc71;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      background: var(--bg-light);
+      color: var(--text-dark);
+      line-height: 1.5;
+      user-select: none;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .hero {
+      background: var(--primary-blue);
+      color: var(--white);
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+      margin-bottom: 20px;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .hero .badge {
+      background: rgba(255,255,255,0.2);
+      color: var(--white);
+      padding: 6px 12px;
+      padding-left: 16px;
+      padding-right: 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      font-size: 32px;
+      font-weight: bold;
+      margin: 0 0 8px 0;
+    }
+
+    .hero .tagline {
+      font-size: 18px;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    .main {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .textarea-row {
+      background: var(--white);
+      padding: 16px 20px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .textarea-row .hint {
+      font-size: 12px;
+      color: var(--text-gray);
+      margin-bottom: 6px;
+    }
+
+    .textarea-row textarea {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .textarea-row textarea:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+    }
+
+    .textarea-row .errors {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--error-red);
+      display: none;
+    }
+
+    .textarea-row .errors.visible {
+      display: block;
+    }
+
+    .send-btn {
+      background: var(--primary-blue);
+      color: var(--white);
+      border: none;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      align-self: flex-end;
+      transition: background 0.2s;
+    }
+
+    .send-btn:hover {
+      background: var(--primary-blue-dark);
+    }
+
+    .limits-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .chip {
+      background: #e8e8e8;
+      color: var(--text-dark);
+      padding: 6px 12px;
+      padding-left: 10px;
+      padding-right: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #columns {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    #columns .column {
+      flex: none;
+      min-width: 0;
+    }
+
+    @media (max-width: 640px) {
+      #columns {
+        grid-template-columns: 1fr;
+      }
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 4px;
+      }
+      .timeline li {
+        flex: none;
+        text-align: center;
+      }
+      .timeline li .step {
+        font-size: 12px;
+      }
+      .timeline li .label {
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .timeline li::before {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+      .timeline li::after {
+        display: none;
+      }
+    }
+
+    .column {
+      background: var(--white);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      min-width: 0;
+      position: relative;
+    }
+
+    @media (max-width: 640px) {
+      .columns {
+        flex-direction: column;
+        gap: 12px;
+      }
+      .column {
+        min-width: 100%;
+      }
+    }
+
+    @media (min-width: 641px) and (max-width: 390px) {
+      .columns {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .column {
+        flex: 1;
+        min-width: 100%;
+      }
+    }
+
+    @media (min-width: 391px) {
+      .columns {
+        flex-direction: row;
+        gap: 12px;
+      }
+      .column {
+        flex: 1;
+        min-width: 240px;
+      }
+    }
+
+    .column .header {
+      font-weight: bold;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--primary-blue);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .column.discarded {
+      border-color: #95a5a6;
+    }
+
+    .column.discarded .discarded-badge {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: #fdecea;
+      color: #c00;
+      margin: 8px 0 0 0;
+      display: inline-block;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .column.winner {
+      border-color: #2ecc71;
+    }
+
+    .column.winner .discarded-badge {
+      opacity: 0.6;
+    }
+
+    .column.discarded {
+      opacity: 0.6;
+    }
+
+    .timeline {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .timeline li {
+      position: relative;
+      flex: 1;
+      text-align: center;
+    }
+
+    .timeline li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--primary-blue);
+      background: white;
+      z-index: 1;
+    }
+
+    .timeline li::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 20px;
+      width: 50%;
+      height: 2px;
+      background: var(--text-gray);
+      z-index: 0;
+    }
+
+    .timeline li:last-child::after {
+      display: none;
+    }
+
+    .timeline li.active::before {
+      border-color: var(--success-green);
+    }
+
+    .timeline li.done::before {
+      border-color: var(--success-green);
+      background: var(--success-green);
+    }
+
+    .timeline li .step {
+      position: relative;
+      z-index: 2;
+      font-size: 14px;
+    }
+
+    .timeline li .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .messages {
+      margin-top: 12px;
+      max-height: 520px;
+      overflow-y: auto;
+    }
+
+    .message-bubble {
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 20px;
+      font-size: 12px;
+      line-height: 1.3;
+      max-width: 85%;
+      position: relative;
+    }
+
+    .message-bubble.buyer {
+      background: #e3f2fd;
+      color: var(--text-dark);
+      margin-left: auto;
+      margin-right: 4px;
+    }
+
+    .message-bubble.store {
+      background: var(--white);
+      color: var(--text-dark);
+      border: 1px solid #ddd;
+      margin-right: auto;
+      margin-left: 4px;
+    }
+
+    .message-bubble.rejection {
+      background: #fdecea;
+      color: #c00;
+      border: 1px solid #c00;
+      padding: 8px 12px;
+      border-radius: 20px;
+    }
+
+    .message-bubble .round {
+      font-size: 10px;
+      color: var(--text-gray);
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .message-bubble .round::before {
+      content: "Ronda ";
+      font-weight: bold;
+    }
+
+    .rejection-text {
+      background: #e74c3c;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    .proposal-card {
+      background: var(--white);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 16px;
+      display: none;
+      align-items: flex-start;
+    }
+
+    .proposal-card.visible {
+      display: block;
+    }
+
+    .proposal-card .winner-badge {
+      background: var(--primary-blue);
+      color: var(--white);
+      padding: 6px 12px;
+      padding-left: 16px;
+      padding-right: 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+
+    .proposal-card .store-name {
+      font-weight: bold;
+      font-size: 20px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .proposal-card .details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .details-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 150px;
+    }
+
+    .details-row .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-gray);
+    }
+
+    .details-row .value {
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .details-row .list-price {
+      text-decoration: line-through;
+      color: var(--text-gray);
+      font-size: 14px;
+    }
+
+    .proposal-card .thread {
+      margin-top: 12px;
+      max-height: 140px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    .proposal-card .thread .thread-message {
+      padding: 6px 8px;
+      margin: 4px 0;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .proposal-card .thread .thread-message.buyer {
+      background: #e3f2fd;
+      margin-left: auto;
+      margin-right: 4px;
+    }
+
+    .proposal-card .thread .thread-message.store {
+      background: var(--white);
+      margin-right: auto;
+      margin-left: 4px;
+    }
+
+    .payment-panel {
+      background: var(--white);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .payment-panel.visible {
+      display: block;
+    }
+
+    .payment-panel .state-pill {
+      background: #e8f6ff;
+      color: var(--primary-blue);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .payment-panel .approve-url {
+      background: #f5f5f5;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin-top: 10px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      white-space: break-spaces;
+      overflow: wrap;
+    }
+
+    .payment-panel .approve-url a {
+      color: var(--primary-blue);
+      word-break: break-all;
+    }
+
+    .payment-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .payment-btns button {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .payment-btns button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .approve-btn {
+      background: var(--primary-blue);
+      color: var(--white);
+    }
+
+    .already-approved-btn {
+      background: #666666;
+      color: var(--white);
+    }
+
+    .capture-btn {
+      background: var(--success-green);
+      color: var(--white);
+    }
+
+    .void-btn {
+      background: var(--error-red);
+      color: var(--white);
+    }
+
+    .new-mandado {
+      background: var(--white);
+      border: 2px var(--primary-blue) solid;
+      color: var(--primary-blue);
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+    }
+
+    .new-mandado:hover {
+      background: var(--primary-blue);
+      color: var(--white);
+    }
+
+    .api-error {
+      background: var(--error-red);
+      color: var(--white);
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      display: none;
+      font-size: 13px;
+    }
+
+    .api-error.visible {
+      display: block;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-light);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--primary-blue);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <span class="badge">Modo mock · sandbox sin credenciales</span>
+    <h1>Mandado: tu agente regatea por ti.</h1>
+    <p class="tagline">Tu agente negocia. PayPal retiene. Tú decides.</p>
+  </header>
+
+  <main class="main">
+    <section class="textarea-row">
+      <p class="hint">Escribe tu mandado en natural (español o inglés)</p>
+      <textarea id="mandado-text" placeholder="Audífonos con ANC, máx USD 120, llegan antes del viernes">Audífonos con ANC, máx USD 120, llegan antes del viernes</textarea>
+      <button class="send-btn" id="send-btn">Enviar mandado</button>
+      <div class="errors" id="errors-msg">Error: texto inválido</div>
+    </section>
+
+    <section class="limits-chips" id="limits-chips"></section>
+
+    <section class="columns" id="columns"></section>
+
+    <section class="proposal-card" id="proposal-card">
+      <div class="winner-badge" id="winner-badge">Ganadora</div>
+      <div class="store-name" id="store-name">Tienda</div>
+      <div class="details" id="details"></div>
+    </section>
+
+    <section class="payment-panel" id="payment-panel">
+      <ul class="timeline" id="timeline">
+        <li>
+          <div class="step">CREATED</div>
+          <div class="label">Nuevo mandado</div>
+        </li>
+        <li>
+          <div class="step">AUTHORIZED</div>
+          <div class="label">PayPal autorizado</div>
+        </li>
+        <li>
+          <div class="step">COMPLETED</div>
+          <div class="label">Orden completada</div>
+        </li>
+        <li>
+          <div class="step">VOIDED</div>
+          <div class="label">Anulado</div>
+        </li>
+      </ul>
+      <div class="state-pill" id="state-pill">AUTHORIZADO · dinero retenido, no cobrado</div>
+      <div class="approve-url" id="approve-url"><i>Sin orden activa</i></div>
+      <div class="payment-btns">
+        <button class="approve-btn" id="authorize-btn">Autorizar con PayPal</button>
+        <button class="already-approved-btn" id="approved-btn">Ya aprobé en PayPal</button>
+        <button class="capture-btn" id="capture-btn">Capturar</button>
+        <button class="void-btn" id="void-btn">Anular</button>
+      </div>
+    </section>
+
+    <section>
+      <button class="new-mandado" id="new-mandado">Nuevo mandado</button>
+    </section>
+
+    <section class="api-error" id="api-error">Error de API: <span id="api-error-msg"></span></section>
+  </section>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

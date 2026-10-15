@@ -14,6 +14,8 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import path from "node:path";
+import fs from "node:fs";
 import { parseRequest } from "./limits.js";
 import { createDemoStores } from "./stores.js";
 import { negotiate } from "./negotiate.js";
@@ -58,6 +60,39 @@ function sseWrite(res, event) {
   res.write(`event: ${event.type}\n`);
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
+
+function serveStatic(res, publicUrl, basePath) {
+  const cleanUrl = publicUrl === "/" ? "index.html" : publicUrl.replace(/^\/+/, '') ;
+  let filePath = path.join(basePath, cleanUrl);
+  // Path traversal protection: ensure file stays within basePath
+  filePath = path.resolve(filePath);
+  const resolvedBase = path.resolve(basePath);
+  if (!(filePath.startsWith(resolvedBase + path.sep) || filePath === resolvedBase)) {
+    sendJson(res, 403, { error: "Acceso no autorizado" });
+    return;
+  }
+  if (!fs.existsSync(filePath)) {
+    sendJson(res, 404, { error: "No encontrado" });
+    return;
+  }
+  const contentType = contentTypes[path.extname(filePath)] || "application/octet-stream";
+  const body = fs.readFileSync(filePath);
+  res.writeHead(200, { "Content-Type": contentType, "Content-Length": body.length });
+  res.end(body);
+}
+
+const contentTypes = {
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "application/javascript",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".wav": "audio/wav",
+  ".mp3": "audio/mpeg",
+};
 
 function approveUrlOf(paypal, order) {
   if (typeof paypal?.approveUrl === "function") {
@@ -162,6 +197,10 @@ export function createServer(options = {}) {
 
     const url = new URL(req.url ?? "/", "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean); // e.g. ['api','mandados',':id','events']
+    if (req.method === "GET" && !url.pathname.startsWith("/api")) {
+      serveStatic(res, url.pathname, path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public'));
+      return;
+    }
 
     try {
       // POST /api/mandados
@@ -344,7 +383,7 @@ export function createServer(options = {}) {
         }
       }
 
-      sendJson(res, 404, { error: "Not found" });
+    sendJson(res, 404, { error: "Not found" });
     } catch (err) {
       sendJson(res, 500, { error: String(err?.message ?? err) });
     }

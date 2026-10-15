@@ -57,6 +57,19 @@ Without credentials the server uses an in-memory `MockPayPal` with the same inte
 
 Mandado needs authorize-then-capture (hold funds at agreement time, capture only after human approval), so it uses **PayPal Orders v2 REST directly** for `create(AUTHORIZE)` / `authorize` / `capture` / `void` (see `src/paypal.js`); the toolkit can still be used for `get_order`.
 
+## UI
+
+Ejecuta `npm start` y abre http://localhost:3000. La UI es una aplicación vanilla HTML/CSS/JS sin pasos de build ni dependencias externas:
+
+- **Hero:** "Mandado: tu agente regatea por ti." + tagline "Tu agente negocia. PayPal retiene. Tú decides." + badge "Modo mock (sandbox sin credenciales)"
+- **Textarea:** prefill "Audífonos con ANC, máx USD 120, llegan antes del viernes" → POST /api/mandados
+- **Chips de límites:** Tope USD 120, Plazo (deadline), atributos (ej. ANC)
+- **Columnas A/B/C:** chat bubbles en vivo con eventos SSE store_message. Rechazos (rejection:true) resaltan en rojo "Excede tu tope" (momento WOW). store_discarded muestra una badg con la razón traducida (deadline=Fuera de plazo, over_cap=Excede tope, no_stock=Sin stock, no_deal). Columna ganadora destacada cuando llega la propuesta.
+- **Tarjeta de propuesta:** nombre tienda, precio final, envío (Gratis si 0), total, precio de lista, ahorro, fecha entrega, hilo resumible.
+- **Panel de pago:** botón "Autorizar con PayPal" → POST /authorize; muestra approveUrl (abre en nueva pestaña) + "Ya aprobé en PayPal" → POST /approved. Estado pill AUTHORIZADO (dinero retenido, no cobrado). Botones "Capturar" (POST /capture) y "Anular" (POST /void). Estados finales COMPLETED/CAPTURED (mostra ID de captura si está presente) o VOIDED. Línea de tiempo: CREATED → AUTHORIZED → COMPLETED / VOIDED. También actualiza desde payment_update SSE eventos. Errores de API en alerta visible.
+- **Botón "Nuevo mandado":** reset.
+- **Responsive:** 3 columnas en escritorio, apiladas en <=640px (se ve bien a 390px). Acento azul estilo PayPal.
+
 ## License
 
 [MIT](./LICENSE) © 2026 Andrés Sierra
