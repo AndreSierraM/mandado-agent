@@ -16,10 +16,11 @@ import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
-import { parseRequest } from "./limits.js";
+import { parseRequestWithLlm } from "./limits.js";
 import { createDemoStores } from "./stores.js";
 import { negotiate } from "./negotiate.js";
 import { createPayPalClient } from "./paypal.js";
+import { createLlmClient, createLlmWriter, createLlmParse } from "./llm.js";
 
 function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);
@@ -107,14 +108,22 @@ function approveUrlOf(paypal, order) {
 }
 
 /**
- * @param {{ paypal?: object, now?: Date|string|number, writer?: Function, maxRounds?: number }} [options]
+ * @param {{ paypal?: object, now?: Date|string|number, clock?: () => Date,
+ *   writer?: Function, llm?: object|null, llmParse?: Function, maxRounds?: number }} [options]
  * @returns {{ server: import('node:http').Server, mandados: Map }}
  */
 export function createServer(options = {}) {
   const paypal = options.paypal ?? createPayPalClient();
-  const now = options.now ?? null;
-  const writer = options.writer ?? null;
+  // One base date per mandado: options.now wins, otherwise options.clock().
+  const clock = typeof options.clock === "function" ? options.clock : () => new Date();
+  const llm = options.llm !== undefined ? options.llm : createLlmClient();
+  const writer = options.writer ?? (llm ? createLlmWriter(llm) : null);
+  const llmParse = options.llmParse ?? (llm ? createLlmParse(llm) : null);
   const maxRounds = options.maxRounds ?? 3;
+
+  function aiInfo() {
+    return { enabled: Boolean(llm), model: llm?.model ?? null };
+  }
 
   /** id -> { id, limits, status, events, columns, discarded, proposal, payment } */
   const mandados = new Map();
@@ -146,6 +155,7 @@ export function createServer(options = {}) {
       discarded: m.discarded,
       proposal: m.proposal,
       payment: m.payment,
+      ai: aiInfo(),
     };
   }
 
@@ -153,7 +163,7 @@ export function createServer(options = {}) {
     const m = mandados.get(id);
     if (!m) return;
     try {
-      const stores = createDemoStores({ now: now ?? undefined });
+      const stores = createDemoStores({ now: m.now });
       const gen = negotiate(m.limits, stores, { writer, maxRounds });
       for await (const event of gen) {
         if (event.type === "store_message") {
@@ -210,9 +220,15 @@ export function createServer(options = {}) {
           sendJson(res, 400, { error: "Body must be JSON { text: string }" });
           return;
         }
+        // Resolve ONE base date per mandado at creation time; it feeds both the
+        // deterministic limits parsing and the demo stores, so delivery dates
+        // and the deadline always share the same base date.
+        const baseNow =
+          options.now != null ? new Date(options.now) : new Date(clock());
+        const nowISO = baseNow.toISOString();
         let limits;
         try {
-          limits = parseRequest(body.text, now ? { now } : {});
+          limits = await parseRequestWithLlm(body.text, { now: nowISO, llmParse });
         } catch (err) {
           sendJson(res, 400, { error: String(err?.message ?? err) });
           return;
@@ -220,6 +236,7 @@ export function createServer(options = {}) {
         const id = randomUUID();
         const m = {
           id,
+          now: nowISO,
           limits,
           status: "negotiating",
           events: [],
@@ -229,7 +246,7 @@ export function createServer(options = {}) {
           payment: null,
         };
         mandados.set(id, m);
-        sendJson(res, 201, { id, limits });
+        sendJson(res, 201, { id, limits, ai: aiInfo() });
         // Negotiate in the background; clients poll GET or subscribe to SSE.
         void runNegotiation(id);
         return;

@@ -48,8 +48,24 @@ See [docs/API.md](./docs/API.md) for endpoints and SSE event JSON schema.
 | `PAYPAL_CLIENT_ID` | (none → mock) | PayPal REST app client id |
 | `PAYPAL_CLIENT_SECRET` | (none → mock) | PayPal REST app secret |
 | `PAYPAL_ENV` | `sandbox` | `sandbox` → `https://api-m.sandbox.paypal.com`, `live` → `https://api-m.paypal.com` |
+| `LLM_BASE_URL` | (none) | OpenAI-compatible base URL, e.g. `https://api.openai.com/v1` |
+| `LLM_API_KEY` | (none) | API key for the LLM endpoint |
+| `LLM_MODEL` | (none) | Model name, e.g. `gpt-4o-mini` |
 
 Without credentials the server uses an in-memory `MockPayPal` with the same interface (`CREATED → APPROVED → AUTHORIZED → CAPTURED/VOIDED` plus an approve link), so the demo and tests never hit the network.
+
+## IA (LLM)
+
+Optionally, set `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` (all three are required) to enable a real LLM through any OpenAI-compatible `/chat/completions` endpoint. When any of the three is missing, the server falls back to deterministic Spanish templates and no network call is made.
+
+The model only writes **buyer message wording** and extracts **item/attributes** from the request text. It never decides prices:
+
+- **Prices, cap and deadline are always decided by code.** `src/limits.js` enforces the cap and deadline deterministically and ignores any `maxAmount`/`deadline`/`currency`/`price` keys returned by the model. `src/negotiate.js` decides every offer and the final price.
+- Every response is validated against a JSON schema (`validate` in `src/llm.js`); malformed JSON, invalid schemas and HTTP failures fall back to templates.
+- The writer's text is guarded: it must contain the exact code-decided price and may not mention any other money amount, otherwise the deterministic template is used.
+- Requests use an `AbortController` with an 8s timeout and the API key is never logged.
+
+The `POST /api/mandados` response and `GET /api/mandados/:id` snapshot include an `ai` field (`{ enabled, model }`) so the UI can show whether the LLM is active.
 
 ## PayPal Agent Toolkit finding
 
