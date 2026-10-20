@@ -25,11 +25,11 @@ function buyerOfferFor(round, cap) {
   return Math.min(cap, base);
 }
 
-function defaultBuyerText({ price, cap }) {
+export function defaultBuyerText({ price, cap }) {
   return `Hola, ofrezco $${price} USD por este artículo. Mi tope es $${cap} USD. ¿Aceptas?`;
 }
 
-function defaultRejectText({ price, cap }) {
+export function defaultRejectText({ price, cap }) {
   return `No puedo aceptar $${price} USD: excede tu tope de $${cap} USD.`;
 }
 

@@ -279,7 +279,7 @@ export async function parseRequestWithLlm(text, options = {}) {
     return base; // LLM failure never breaks deterministic parsing
   }
   if (hints && typeof hints === "object") {
-    if (!base.item && typeof hints.item === "string" && hints.item.trim()) {
+    if (typeof hints.item === "string" && hints.item.trim()) {
       base.item = hints.item.trim();
     }
     if (Array.isArray(hints.attributes)) {

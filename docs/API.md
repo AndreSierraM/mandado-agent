@@ -27,9 +27,12 @@ Response `201`:
     "currency": "USD",
     "deadline": "2026-10-16",
     "attributes": ["ANC"]
-  }
+  },
+  "ai": { "enabled": false, "model": null }
 }
 ```
+
+`ai` reports whether the optional OpenAI-compatible LLM is active (`enabled`) and which model is configured (`model`), without exposing any secret. See [README IA (LLM)](../README.md#ia-llm).
 
 ### GET /api/mandados/:id
 
@@ -59,7 +62,8 @@ Full state for polling. Response `200`:
     "thread": [ … ]
   },
   "payment": null,
-  "events": [ … ]
+  "events": [ … ],
+  "ai": { "enabled": false, "model": null }
 }
 ```
 
