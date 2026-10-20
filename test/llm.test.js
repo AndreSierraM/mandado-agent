@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createLlmClient, createLlmWriter, createLlmParse, validate } from "../src/llm.js";
+import { createLlmClient, createLlmWriter, createLlmParse, validate, stripDates } from "../src/llm.js";
 import { defaultBuyerText, defaultRejectText } from "../src/negotiate.js";
 import { parseRequestWithLlm } from "../src/limits.js";
 import { createServer } from "../src/server.js";
@@ -253,6 +253,105 @@ describe("createLlmWriter", () => {
   it("honors a custom fallback", async () => {
     const writer = createLlmWriter(null, { fallback: () => "custom" });
     assert.equal(await writer(OFFER), "custom");
+  });
+});
+
+describe("writer date handling", () => {
+  const DATE_MSG = {
+    kind: "offer",
+    price: 112,
+    cap: 120,
+    deadline: "2026-10-23",
+    item: "audífonos",
+    storeName: "Tienda C",
+    round: 1,
+  };
+
+  function writerForText(text) {
+    const client = makeClient(async () =>
+      jsonResponse({
+        choices: [{ message: { content: JSON.stringify({ text }) } }],
+      }),
+    );
+    return createLlmWriter(client);
+  }
+
+  const ACCEPT = [
+    "Ofrezco $112 USD, lo necesito antes del 2026-10-23.",
+    "Ofrezco 112 USD con entrega el 23/10.",
+    "Te doy $112 si llega el 23-10-2026.",
+    "Ofrezco $112, mi tope es $120, entrega a más tardar el viernes 23 de octubre.",
+    "Ofrezco $112 USD, entrega el 23/10/2026.",
+  ];
+
+  const BLOCK = [
+    "Ofrezco $112, o $999 si llega el 2026-10-23.",
+    "Ofrezco 112 USD o 999 USD.",
+    "Ofrezco $112, la tienda pide 125.",
+    "Ofrezco $112 aunque pidas US$ 130.",
+    "Ofrezco $112, máximo $23/10.",
+    "Lo necesito el 23 de octubre.",
+    "Ofrezco 1125 por 23/10",
+  ];
+
+  it("accepts messages that only mention the deadline as a date", async () => {
+    for (const text of ACCEPT) {
+      const writer = writerForText(text);
+      assert.equal(await writer(DATE_MSG), text, `should accept: ${text}`);
+    }
+  });
+
+  it("blocks messages with extra numbers or a missing price", async () => {
+    for (const text of BLOCK) {
+      const writer = writerForText(text);
+      assert.equal(
+        await writer(DATE_MSG),
+        defaultBuyerText(DATE_MSG),
+        `should block: ${text}`,
+      );
+    }
+  });
+
+  it("handles reject-kind messages with dates", async () => {
+    const rejectMsg = { kind: "reject", price: 125, rejectedPrice: 125, cap: 120 };
+
+    const okWriter = writerForText(
+      "No acepto $125 USD, excede mi tope de $120. Entrega 23/10.",
+    );
+    assert.equal(
+      await okWriter(rejectMsg),
+      "No acepto $125 USD, excede mi tope de $120. Entrega 23/10.",
+    );
+
+    const badWriter = writerForText("No acepto $125, excede mi tope de $130.");
+    assert.equal(await badWriter(rejectMsg), defaultRejectText(rejectMsg));
+  });
+});
+
+describe("stripDates", () => {
+  it("removes supported date forms", () => {
+    const cases = [
+      "antes del 2026-10-23",
+      "entrega el 2026/10/23",
+      "el 23/10",
+      "el 23/10/2026",
+      "el 23-10-2026",
+      "el 23.10.2026",
+      "23 de octubre",
+      "viernes 23 de octubre de 2026",
+      "23 de octubre del 2026",
+      "October 23",
+      "Oct 23, 2026",
+    ];
+    for (const text of cases) {
+      assert.equal(/\d/.test(stripDates(text)), false, `should strip: ${text}`);
+    }
+  });
+
+  it("leaves money-like and non-date numbers intact", () => {
+    for (const text of ["125", "$23/10", "999 USD", "10-15"]) {
+      assert.equal(stripDates(text), text, `should keep: ${text}`);
+    }
   });
 });
 

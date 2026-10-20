@@ -178,23 +178,69 @@ function numberTokens(text) {
   return out;
 }
 
+const MONTHS_ES =
+  "enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre";
+const WEEKDAYS_ES =
+  "lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo";
+const MONTHS_EN =
+  "january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec";
+const DAY_RE = "(?:0?[1-9]|[12]\\d|3[01])";
+const MON_RE = "(?:0?[1-9]|1[0-2])";
+const YEAR_RE = "(?:19|20)\\d{2}";
+
+const DATE_RE = new RegExp(
+  "(?:" +
+    `(?:\\b(?:${WEEKDAYS_ES})\\s+)?\\b${DAY_RE}\\s+de\\s+(?:${MONTHS_ES})\\b(?:\\s+(?:del|de)\\s+${YEAR_RE})?` +
+    `|\\b(?:${MONTHS_EN})\\s+${DAY_RE}\\b(?:,?\\s+${YEAR_RE})?` +
+    `|\\b${YEAR_RE}[-/]${MON_RE}[-/]${DAY_RE}(?!\\d)` +
+    `|\\b${DAY_RE}/${MON_RE}/${YEAR_RE}(?!\\d)` +
+    `|\\b${DAY_RE}-${MON_RE}-${YEAR_RE}(?!\\d)` +
+    `|\\b${DAY_RE}\\.${MON_RE}\\.${YEAR_RE}(?!\\d)` +
+    `|\\b${DAY_RE}/${MON_RE}(?!\\d)` +
+    ")",
+  "gi",
+);
+
+/**
+ * Remove calendar-shaped dates from text, replacing each with a single space.
+ * A match adjacent to a currency marker is left untouched (e.g. "$23/10" is
+ * money, not a date). Word boundaries keep a date regex from swallowing part
+ * of a larger number.
+ * @param {string} text
+ * @returns {string}
+ */
+export function stripDates(text) {
+  if (typeof text !== "string" || text === "") return text;
+  return text.replace(DATE_RE, (match, offset, whole) => {
+    const before = whole.slice(Math.max(0, offset - 5), offset);
+    const after = whole.slice(offset + match.length, offset + match.length + 5);
+    if (/(?:USD|US\$|COP|[$€])\s*$/.test(before)) return match;
+    if (/^\s*(?:USD|d[óo]l|\$)/.test(after)) return match;
+    return " ";
+  });
+}
+
 /**
  * Guard: the message must contain the code-decided price and no other
  * "money-like" number except the allowed set (price/cap/rejectedPrice) or a
- * small round number <= 3 (e.g. "ronda 2", "3 unidades").
+ * small round number <= 3 (e.g. "ronda 2", "3 unidades"). Dates are stripped
+ * first so mentioning the deadline does not look like a money figure.
  */
 function priceGuardOk(text, msg) {
   if (typeof text !== "string" || !text.trim()) return false;
+  const stripped = stripDates(text);
   const required =
     msg.kind === "reject"
       ? String(msg.rejectedPrice ?? msg.price)
       : String(msg.price);
-  if (!required || required === "null" || !text.includes(required)) return false;
+  if (!required || required === "null" || !numberTokens(stripped).includes(required)) {
+    return false;
+  }
   const allowed = new Set();
   for (const n of [msg.price, msg.cap, msg.rejectedPrice]) {
     if (n !== undefined && n !== null) allowed.add(String(n));
   }
-  for (const token of numberTokens(text)) {
+  for (const token of numberTokens(stripped)) {
     if (allowed.has(token)) continue;
     const value = Number(token.replace(",", "."));
     if (Number.isFinite(value) && value <= 3) continue;
@@ -221,7 +267,7 @@ export function createLlmWriter(client, { fallback } = {}) {
     if (!client || typeof client.chatJson !== "function") return fallbackFn(msg);
     try {
       const system =
-        'Eres el agente comprador de Mandado. Responde SIEMPRE con un objeto JSON con una sola clave "text" que contenga UN mensaje corto (máximo 400 caracteres) en español. El mensaje debe mencionar exactamente el precio indicado en el campo price (o rejectedPrice si es un rechazo) y, opcionalmente, el tope cap. No incluyas ningún otro precio ni cifra de dinero. No inventes montos. No uses markdown.';
+        'Eres el agente comprador de Mandado. Responde SIEMPRE con un objeto JSON con una sola clave "text" que contenga UN mensaje corto (máximo 400 caracteres) en español. El mensaje debe mencionar exactamente el precio indicado en el campo price (o rejectedPrice si es un rechazo) y, opcionalmente, el tope cap. Puedes mencionar la fecha límite de entrega si es útil. No incluyas ningún otro precio ni cifra de dinero. No inventes montos. No uses markdown.';
       const user = [
         `Tipo de mensaje: ${msg.kind === "reject" ? "rechazo" : "oferta"}`,
         `Precio: ${msg.price} USD`,
