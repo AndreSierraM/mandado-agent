@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mandado-agent
+    runtime: node
+    plan: free
+    buildCommand: "npm install --omit=dev || true"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PAYPAL_ENV
+        value: sandbox
+      # Without PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET the app uses MockPayPal.
